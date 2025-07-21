@@ -1,115 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Book a Room</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f9f9f9;
-    }
-    h1 {
-      text-align: center;
-    }
-    form {
-      max-width: 600px;
-      margin: auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      background-color: #007BFF;
-      color: white;
-      border: none;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #successMsg {
-      display: none;
-      max-width: 600px;
-      margin: 20px auto;
-      padding: 15px;
-      background: #e0ffe0;
-      border: 1px solid #90ee90;
-      border-radius: 6px;
-      color: green;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    @media (max-width: 600px) {
-      body {
-        margin: 10px;
-      }
-      form {
-        padding: 15px;
-      }
-      h1 {
-        font-size: 22px;
-      }
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>Booking Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-  <h1>Room Booking Form</h1>
-  <form onsubmit="submitBooking(); return false;">
-    <label for="name">Your Name:</label>
-    <input type="text" id="name" required />
-
-    <label for="room">Select Room:</label>
-    <select id="room" required>
-      <option value="">-- Select --</option>
-      <option value="SSL Origin">SSL Origin</option>
-      <option value="SSL AWS">SSL AWS</option>
-      <option value="Edit Suite">Edit Suite</option>
-    </select>
-
-    <label for="date">Select Date:</label>
-    <input type="date" id="date" required />
-
-    <label for="timeslot">Select Timeslot:</label>
-    <select id="timeslot" required>
-      <option value="">-- Select --</option>
-      <option value="9am–1pm">9am–1pm</option>
-      <option value="1pm–5pm">1pm–5pm</option>
-      <option value="5pm–9pm">5pm–9pm</option>
-    </select>
-
-    <button type="submit">Submit Booking</button>
-  </form>
-
-  <p id="successMsg">✅ Booking submitted! Awaiting approval.</p>
+  <h2>Test Firestore Write</h2>
+  <button onclick="submitTest()">Submit Test Booking</button>
+  <p id="result" style="color: green;"></p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      getDocs,
-      query,
-      where
-    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
@@ -123,48 +26,21 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    async function submitBooking() {
-      const name = document.getElementById("name").value.trim();
-      const room = document.getElementById("room").value;
-      const date = document.getElementById("date").value;
-      const timeslot = document.getElementById("timeslot").value;
-      const successMsg = document.getElementById("successMsg");
-
-      if (!name || !room || !date || !timeslot) {
-        alert("Please fill in all fields.");
-        return;
-      }
-
+    window.submitTest = async function () {
       try {
-        const bookingsRef = collection(db, "bookings");
-        const q = query(bookingsRef,
-          where("room", "==", room),
-          where("date", "==", date),
-          where("timeslot", "==", timeslot)
-        );
-        const snapshot = await getDocs(q);
-
-        if (!snapshot.empty) {
-          alert("❌ That room is already booked for the selected timeslot.");
-          return;
-        }
-
-        await addDoc(bookingsRef, {
-          name,
-          room,
-          date,
-          timeslot,
+        const docRef = await addDoc(collection(db, "bookings"), {
+          name: "Test User",
+          room: "SSL Origin",
+          date: "2025-07-25",
+          timeslot: "9am–1pm",
           status: "Pending"
         });
-
-        successMsg.style.display = "block";
-        document.querySelector("form").reset();
-        window.scrollTo(0, document.body.scrollHeight);
+        document.getElementById("result").textContent = "✅ Booking ID: " + docRef.id;
       } catch (error) {
-        console.error("❌ Firestore Error:", error);
-        alert("An error occurred. Please try again.");
+        document.getElementById("result").textContent = "❌ " + error.message;
+        console.error(error);
       }
-    }
+    };
   </script>
 </body>
 </html>
