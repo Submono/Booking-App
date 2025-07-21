@@ -1,164 +1,216 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Booking List</title>
   <style>
-    body { font-family: Arial, sans-serif; }
-    .hidden { display: none; }
-    .filters, .actions { margin: 1rem 0; }
-    .filters label { margin-right: 1rem; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-    th, td { border: 1px solid #aaa; padding: 8px; }
-    th { background-color: #eee; }
-    .status-Pending { color: orange; }
-    .status-Approved { color: green; }
-    .status-Rejected { color: red; }
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+    }
+    .hidden {
+      display: none;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: flex-end;
+      margin-bottom: 1rem;
+    }
+    .filters label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.95rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    .status-approved {
+      color: green;
+    }
+    .status-pending {
+      color: orange;
+    }
+    .status-rejected {
+      color: red;
+    }
   </style>
 </head>
 <body>
-
-  <!-- Login Section -->
   <div id="loginSection">
-    <h2>🔒 Admin Login</h2>
     <input type="password" id="passwordInput" placeholder="Enter password">
     <button id="loginButton">Login</button>
-    <p id="loginMessage" style="color: red;"></p>
+    <p id="loginMessage" style="color:red;"></p>
   </div>
 
-  <!-- Admin Interface -->
   <div id="adminSection" class="hidden">
-    <h1>📋 Booking Manager</h1>
     <div class="filters">
-      <label>Room:<br>
-        <select id="filterRoom">
+      <label>
+        Room:
+        <select id="roomFilter">
           <option value="">All</option>
-          <option value="SSL Origin">SSL Origin</option>
-          <option value="SSL AWS">SSL AWS</option>
-          <option value="Edit Suite">Edit Suite</option>
         </select>
       </label>
-      <label>Status:<br>
-        <select id="filterStatus">
+      <label>
+        Status:
+        <select id="statusFilter">
           <option value="">All</option>
           <option value="Pending">Pending</option>
           <option value="Approved">Approved</option>
           <option value="Rejected">Rejected</option>
         </select>
       </label>
-      <label>From Date:<br>
-        <input type="date" id="filterDate">
+      <label>
+        From Date:
+        <input type="date" id="dateFilter" />
       </label>
-      <label><br>
+      <label>
         <input type="checkbox" id="showPast"> Show Past Bookings
       </label>
-      <br>
-      <button id="applyFilters">Apply Filters</button>
-      <button id="clearFilters">Clear Filters</button>
+      <div>
+        <button onclick="applyFilters()">Apply Filters</button>
+        <button onclick="clearFilters()">Clear Filters</button>
+      </div>
     </div>
-    <table id="bookingTable">
+
+    <table>
       <thead>
-        <tr><th>Room</th><th>Name</th><th>Date</th><th>Timeslot</th><th>Status</th></tr>
+        <tr>
+          <th>Room</th>
+          <th>Name</th>
+          <th>Date</th>
+          <th>Timeslot</th>
+          <th>Status</th>
+        </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="bookingTable"></tbody>
     </table>
   </div>
 
-  <!-- Firebase Module Script -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
     import {
-      getFirestore, collection, getDocs, query,
-      orderBy, updateDoc, doc
-    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+      getFirestore, collection, getDocs, updateDoc,
+      doc, query, where
+    } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
-    const config = {
-      apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lLtE",
+    const firebaseConfig = {
+      apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
       authDomain: "studio-bookings-5c9ba.firebaseapp.com",
       projectId: "studio-bookings-5c9ba",
       storageBucket: "studio-bookings-5c9ba.appspot.com",
       messagingSenderId: "1044574824840",
       appId: "1:1044574824840:web:b4be9325f430390d29b23d"
     };
-    const db = getFirestore(initializeApp(config));
 
-    const roomFilter = document.getElementById("filterRoom");
-    const statusFilter = document.getElementById("filterStatus");
-    const dateFilter = document.getElementById("filterDate");
-    const showPast = document.getElementById("showPast");
-    const applyBtn = document.getElementById("applyFilters");
-    const clearBtn = document.getElementById("clearFilters");
-    const tbody = document.querySelector("#bookingTable tbody");
-
-    function formatDate(iso) {
-      const [y, m, d] = iso.split("-");
-      return `${d}/${m}/${y}`;
-    }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    let bookings = [];
 
     async function loadBookings() {
-      const snap = await getDocs(query(collection(db, "bookings"), orderBy("date", "desc")));
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const snapshot = await getDocs(collection(db, "bookings"));
+      bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      populateFilters();
+      applyFilters();
     }
 
-    function displayBookings(bookings) {
-      tbody.innerHTML = bookings.length
-        ? bookings.map(b => `
-            <tr>
-              <td>${b.room}</td>
-              <td>${b.name}</td>
-              <td>${formatDate(b.date)}</td>
-              <td>${b.timeslot}</td>
-              <td>
-                <select onchange="updateStatus('${b.id}', this.value)">
-                  <option value="Pending" ${b.status==="Pending"?"selected":""}>Pending</option>
-                  <option value="Approved" ${b.status==="Approved"?"selected":""}>Approved</option>
-                  <option value="Rejected" ${b.status==="Rejected"?"selected":""}>Rejected</option>
-                </select>
-              </td>
-            </tr>`).join('')
-        : `<tr><td colspan="5">No bookings found.</td></tr>`;
+    window.applyFilters = function () {
+      const roomVal = document.getElementById("roomFilter").value;
+      const statusVal = document.getElementById("statusFilter").value;
+      const dateVal = document.getElementById("dateFilter").value;
+      const showPast = document.getElementById("showPast").checked;
+
+      const today = new Date();
+      const selectedDate = dateVal ? new Date(dateVal) : today;
+
+      const filtered = bookings.filter(b => {
+        const bDate = new Date(b.date);
+        const afterFilter = !dateVal || bDate >= selectedDate;
+        const futureOnly = showPast || bDate >= today;
+        return (!roomVal || b.room === roomVal) &&
+               (!statusVal || b.status === statusVal) &&
+               afterFilter && futureOnly;
+      });
+      displayBookings(filtered);
     }
 
-    window.updateStatus = async (id, status) => {
-      await updateDoc(doc(db, "bookings", id), { status });
-    };
+    window.clearFilters = function () {
+      document.getElementById("roomFilter").value = "";
+      document.getElementById("statusFilter").value = "";
+      document.getElementById("dateFilter").value = "";
+      document.getElementById("showPast").checked = false;
+      applyFilters();
+    }
 
-    window.applyFilters = async () => {
-      const today = new Date().toISOString().split("T")[0];
-      let list = await loadBookings();
+    function populateFilters() {
+      const roomFilter = document.getElementById("roomFilter");
+      const rooms = [...new Set(bookings.map(b => b.room))];
+      rooms.forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r;
+        opt.textContent = r;
+        roomFilter.appendChild(opt);
+      });
+    }
 
-      if (!showPast.checked) list = list.filter(b => b.date >= today);
-      if (roomFilter.value) list = list.filter(b => b.room === roomFilter.value);
-      if (statusFilter.value) list = list.filter(b => b.status === statusFilter.value);
-      if (dateFilter.value) list = list.filter(b => b.date >= dateFilter.value);
+    function displayBookings(list) {
+      const tbody = document.getElementById("bookingTable");
+      tbody.innerHTML = list.length ? list.map(b => {
+        const statusClass = b.status === "Approved" ? "status-approved" :
+                            b.status === "Rejected" ? "status-rejected" : "status-pending";
+        return `<tr>
+          <td>${b.room}</td>
+          <td>${b.name}</td>
+          <td>${formatDate(b.date)}</td>
+          <td>${b.timeslot}</td>
+          <td>
+            <select class="${statusClass}" onchange="updateStatus('${b.id}', this.value)">
+              <option value="Pending" ${b.status === "Pending" ? "selected" : ""}>Pending</option>
+              <option value="Approved" ${b.status === "Approved" ? "selected" : ""}>Approved</option>
+              <option value="Rejected" ${b.status === "Rejected" ? "selected" : ""}>Rejected</option>
+            </select>
+          </td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="5">No bookings found.</td></tr>';
+    }
 
-      displayBookings(list);
-    };
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' });
+    }
 
-    applyBtn.addEventListener("click", window.applyFilters);
-    clearBtn.addEventListener("click", () => {
-      roomFilter.value = "";
-      statusFilter.value = "";
-      dateFilter.value = "";
-      showPast.checked = false;
-      window.applyFilters();
-    });
+    window.updateStatus = async function (id, status) {
+      const ref = doc(db, "bookings", id);
+      await updateDoc(ref, { status });
+      bookings = bookings.map(b => b.id === id ? { ...b, status } : b);
+      applyFilters();
+    }
+
+    loadBookings();
   </script>
 
-  <!-- Login Script -->
   <script>
-    document.getElementById("loginButton").addEventListener("click", () => {
-      const pwd = document.getElementById("passwordInput").value;
-      const msg = document.getElementById("loginMessage");
-      if (pwd === "50undpr0ducti0n") {
+    document.getElementById("loginButton").addEventListener("click", function () {
+      const ADMIN_PASSWORD = "50undpr0ducti0n";
+      const input = document.getElementById("passwordInput").value;
+      const loginMessage = document.getElementById("loginMessage");
+
+      if (input === ADMIN_PASSWORD) {
         document.getElementById("loginSection").classList.add("hidden");
         document.getElementById("adminSection").classList.remove("hidden");
         window.applyFilters();
       } else {
-        msg.textContent = "Incorrect password";
+        loginMessage.textContent = "Incorrect password";
       }
     });
   </script>
-
 </body>
 </html>
