@@ -12,9 +12,14 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    console.log("✅ Firebase script is running!");
+    console.log("✅ Firebase script is running");
 
     const firebaseConfig = {
       apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
@@ -28,14 +33,16 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // Submit a test booking
     async function bookRoom() {
       try {
         const docRef = await addDoc(collection(db, "bookings"), {
           room: "Test Room",
-          date: "2025-07-22",
+          date: new Date().toISOString().split("T")[0],
           timeslot: "9am–1pm",
           name: "Test User",
-          status: "Pending"
+          status: "Pending",
+          created: new Date()
         });
         alert("✅ Booking submitted! ID: " + docRef.id);
       } catch (error) {
@@ -43,6 +50,26 @@
         alert("Write failed: " + error.message);
       }
     }
+
+    // Check Firestore for existing bookings
+    async function checkBookings() {
+      try {
+        const snapshot = await getDocs(collection(db, "bookings"));
+        if (snapshot.empty) {
+          console.log("📭 No bookings found.");
+        } else {
+          console.log(`📦 Found ${snapshot.size} bookings:`);
+          snapshot.forEach(doc => {
+            console.log("📄", doc.id, doc.data());
+          });
+        }
+      } catch (err) {
+        console.error("❌ Error checking bookings:", err);
+      }
+    }
+
+    // Run booking check on load
+    checkBookings();
   </script>
 </body>
 </html>
