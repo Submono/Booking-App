@@ -31,9 +31,6 @@
     th {
       background-color: #eee;
     }
-    .status-Pending { color: orange; }
-    .status-Approved { color: green; }
-    .status-Rejected { color: red; }
   </style>
 </head>
 <body>
@@ -42,7 +39,7 @@
   <div id="loginSection">
     <h2>🔒 Admin Login</h2>
     <input type="password" id="passwordInput" placeholder="Enter password">
-    <button onclick="login()">Login</button>
+    <button id="loginButton">Login</button>
     <p id="loginMessage" style="color: red;"></p>
   </div>
 
@@ -100,6 +97,7 @@
     </table>
   </div>
 
+  <!-- 🔥 FIREBASE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import {
@@ -124,11 +122,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const passwordInput = document.getElementById("passwordInput");
-    const loginSection = document.getElementById("loginSection");
-    const adminSection = document.getElementById("adminSection");
-    const loginMessage = document.getElementById("loginMessage");
-
     const roomFilter = document.getElementById("filterRoom");
     const statusFilter = document.getElementById("filterStatus");
     const dateFilter = document.getElementById("filterDate");
@@ -137,20 +130,8 @@
     const clearBtn = document.getElementById("clearFilters");
     const tbody = document.querySelector("#bookingTable tbody");
 
-    const ADMIN_PASSWORD = "50undpr0ducti0n"; // Custom admin password
-
-    window.login = function () {
-      if (passwordInput.value === ADMIN_PASSWORD) {
-        loginSection.classList.add("hidden");
-        adminSection.classList.remove("hidden");
-        applyFilters();
-      } else {
-        loginMessage.textContent = "Incorrect password";
-      }
-    };
-
-    function formatDate(isoString) {
-      const [year, month, day] = isoString.split("-");
+    function formatDate(iso) {
+      const [year, month, day] = iso.split("-");
       return `${day}/${month}/${year}`;
     }
 
@@ -209,14 +190,13 @@
       }
     };
 
-    async function applyFilters() {
+    window.applyFilters = async () => {
       let bookings = await loadBookings();
       const roomVal = roomFilter.value;
       const statusVal = statusFilter.value;
       const dateVal = dateFilter.value;
       const today = new Date().toISOString().split("T")[0];
 
-      // Filter future bookings unless showPast is checked
       if (!showPast.checked) {
         bookings = bookings.filter(b => b.date >= today);
       }
@@ -226,16 +206,34 @@
       if (dateVal) bookings = bookings.filter(b => b.date >= dateVal);
 
       displayBookings(bookings);
-    }
+    };
 
-    applyBtn.addEventListener("click", applyFilters);
+    applyBtn.addEventListener("click", window.applyFilters);
     clearBtn.addEventListener("click", () => {
       roomFilter.value = "";
       statusFilter.value = "";
       dateFilter.value = "";
       showPast.checked = false;
-      applyFilters();
+      window.applyFilters();
     });
   </script>
+
+  <!-- 🔓 LOGIN HANDLER OUTSIDE MODULE -->
+  <script>
+    document.getElementById("loginButton").addEventListener("click", function () {
+      const ADMIN_PASSWORD = "50undpr0ducti0n";
+      const input = document.getElementById("passwordInput").value;
+      const loginMessage = document.getElementById("loginMessage");
+
+      if (input === ADMIN_PASSWORD) {
+        document.getElementById("loginSection").classList.add("hidden");
+        document.getElementById("adminSection").classList.remove("hidden");
+        window.applyFilters(); // Now accessible from global
+      } else {
+        loginMessage.textContent = "Incorrect password";
+      }
+    });
+  </script>
+
 </body>
 </html>
