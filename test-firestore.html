@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Firestore Test</title>
+</head>
+<body>
+  <h1>📦 Firebase Firestore Test</h1>
+  <button id="writeTest">Write Test Booking</button>
+  <button id="readAll">Read All Bookings</button>
+
+  <pre id="logOutput" style="background:#eee; padding:1rem; margin-top:1rem;"></pre>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const logBox = document.getElementById('logOutput');
+
+    function log(msg) {
+      console.log(msg);
+      logBox.textContent += msg + "\n";
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
+      authDomain: "studio-bookings-5c9ba.firebaseapp.com",
+      projectId: "studio-bookings-5c9ba",
+      storageBucket: "studio-bookings-5c9ba.appspot.com",
+      messagingSenderId: "1044574824840",
+      appId: "1:1044574824840:web:b4be9325f430390d29b23d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Write a test booking
+    async function writeTestBooking() {
+      try {
+        const docRef = await addDoc(collection(db, "bookings"), {
+          room: "Test Room",
+          name: "Debug User",
+          date: new Date().toISOString().split("T")[0],
+          timeslot: "9am–1pm",
+          status: "Pending",
+          created: new Date()
+        });
+        log("✅ Booking submitted: " + docRef.id);
+      } catch (err) {
+        log("❌ Write failed: " + err.message);
+      }
+    }
+
+    // Read all bookings
+    async function readAllBookings() {
+      try {
+        const snapshot = await getDocs(collection(db, "bookings"));
+        if (snapshot.empty) {
+          log("📭 No bookings found.");
+        } else {
+          log(`📦 Found ${snapshot.size} bookings:`);
+          snapshot.forEach(doc => {
+            log(`📄 ${doc.id}: ${JSON.stringify(doc.data())}`);
+          });
+        }
+      } catch (err) {
+        log("❌ Read failed: " + err.message);
+      }
+    }
+
+    document.getElementById('writeTest').addEventListener('click', writeTestBooking);
+    document.getElementById('readAll').addEventListener('click', readAllBookings);
+  </script>
+</body>
+</html>
