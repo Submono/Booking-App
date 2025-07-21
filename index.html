@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Booking List</title>
+  <title>Admin Bookings</title>
   <style>
     body {
-      font-family: sans-serif;
-      padding: 1rem;
+      font-family: Arial, sans-serif;
+      margin: 20px;
     }
     .hidden {
       display: none;
@@ -15,73 +15,112 @@
     .filters {
       display: flex;
       flex-wrap: wrap;
-      gap: 1.5rem;
-      align-items: flex-end;
-      margin-bottom: 1rem;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 20px;
     }
     .filters label {
       display: flex;
       flex-direction: column;
-      font-size: 0.95rem;
+      font-size: 14px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 10px;
     }
     th, td {
-      padding: 8px;
       border: 1px solid #ccc;
+      padding: 8px;
       text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
     }
     .status-approved {
       color: green;
+      font-weight: bold;
     }
     .status-pending {
       color: orange;
+      font-weight: bold;
     }
     .status-rejected {
       color: red;
+      font-weight: bold;
+    }
+    @media (max-width: 600px) {
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filters label {
+        width: 100%;
+      }
+      table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+      }
+      thead {
+        display: none;
+      }
+      tr {
+        margin-bottom: 15px;
+        border-bottom: 1px solid #ccc;
+      }
+      td {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        border: none;
+        border-bottom: 1px solid #eee;
+      }
+      td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        flex-basis: 40%;
+      }
     }
   </style>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div id="loginSection">
-    <input type="password" id="passwordInput" placeholder="Enter password">
+    <input type="password" id="passwordInput" placeholder="Enter password" />
     <button id="loginButton">Login</button>
-    <p id="loginMessage" style="color:red;"></p>
+    <p id="loginMessage" style="color: red;"></p>
   </div>
 
   <div id="adminSection" class="hidden">
     <div class="filters">
-      <label>
-        Room:
-        <select id="roomFilter">
+      <label>Room:
+        <select id="filterRoom">
           <option value="">All</option>
+          <option value="SSL Origin">SSL Origin</option>
+          <option value="SSL AWS">SSL AWS</option>
+          <option value="Edit Suite">Edit Suite</option>
         </select>
       </label>
-      <label>
-        Status:
-        <select id="statusFilter">
+      <label>Status:
+        <select id="filterStatus">
           <option value="">All</option>
           <option value="Pending">Pending</option>
           <option value="Approved">Approved</option>
           <option value="Rejected">Rejected</option>
         </select>
       </label>
-      <label>
-        From Date:
-        <input type="date" id="dateFilter" />
+      <label>From Date:
+        <input type="date" id="filterDate" />
       </label>
       <label>
-        <input type="checkbox" id="showPast"> Show Past Bookings
+        <input type="checkbox" id="showPast" /> Show Past Bookings
       </label>
-      <div>
-        <button onclick="applyFilters()">Apply Filters</button>
-        <button onclick="clearFilters()">Clear Filters</button>
-      </div>
+      <button onclick="applyFilters()">Apply Filters</button>
+      <button onclick="clearFilters()">Clear Filters</button>
+      <button onclick="exportToExcel()">Export to Excel</button>
     </div>
 
-    <table>
+    <table id="bookingTable">
       <thead>
         <tr>
           <th>Room</th>
@@ -91,16 +130,19 @@
           <th>Status</th>
         </tr>
       </thead>
-      <tbody id="bookingTable"></tbody>
+      <tbody></tbody>
     </table>
   </div>
 
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import {
-      getFirestore, collection, getDocs, updateDoc,
-      doc, query, where
-    } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+      getFirestore,
+      collection,
+      getDocs,
+      updateDoc,
+      doc
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
@@ -113,85 +155,106 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    let bookings = [];
+    let allBookings = [];
 
-    async function loadBookings() {
-      const snapshot = await getDocs(collection(db, "bookings"));
-      bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      populateFilters();
-      applyFilters();
-    }
-
-    window.applyFilters = function () {
-      const roomVal = document.getElementById("roomFilter").value;
-      const statusVal = document.getElementById("statusFilter").value;
-      const dateVal = document.getElementById("dateFilter").value;
-      const showPast = document.getElementById("showPast").checked;
-
-      const today = new Date();
-      const selectedDate = dateVal ? new Date(dateVal) : today;
-
-      const filtered = bookings.filter(b => {
-        const bDate = new Date(b.date);
-        const afterFilter = !dateVal || bDate >= selectedDate;
-        const futureOnly = showPast || bDate >= today;
-        return (!roomVal || b.room === roomVal) &&
-               (!statusVal || b.status === statusVal) &&
-               afterFilter && futureOnly;
-      });
-      displayBookings(filtered);
-    }
-
-    window.clearFilters = function () {
-      document.getElementById("roomFilter").value = "";
-      document.getElementById("statusFilter").value = "";
-      document.getElementById("dateFilter").value = "";
-      document.getElementById("showPast").checked = false;
-      applyFilters();
-    }
-
-    function populateFilters() {
-      const roomFilter = document.getElementById("roomFilter");
-      const rooms = [...new Set(bookings.map(b => b.room))];
-      rooms.forEach(r => {
-        const opt = document.createElement("option");
-        opt.value = r;
-        opt.textContent = r;
-        roomFilter.appendChild(opt);
-      });
-    }
-
-    function displayBookings(list) {
-      const tbody = document.getElementById("bookingTable");
-      tbody.innerHTML = list.length ? list.map(b => {
-        const statusClass = b.status === "Approved" ? "status-approved" :
-                            b.status === "Rejected" ? "status-rejected" : "status-pending";
-        return `<tr>
-          <td>${b.room}</td>
-          <td>${b.name}</td>
-          <td>${formatDate(b.date)}</td>
-          <td>${b.timeslot}</td>
-          <td>
-            <select class="${statusClass}" onchange="updateStatus('${b.id}', this.value)">
-              <option value="Pending" ${b.status === "Pending" ? "selected" : ""}>Pending</option>
-              <option value="Approved" ${b.status === "Approved" ? "selected" : ""}>Approved</option>
-              <option value="Rejected" ${b.status === "Rejected" ? "selected" : ""}>Rejected</option>
-            </select>
-          </td>
-        </tr>`;
-      }).join('') : '<tr><td colspan="5">No bookings found.</td></tr>';
-    }
+    const tbody = document.querySelector("#bookingTable tbody");
 
     function formatDate(dateStr) {
       const d = new Date(dateStr);
-      return d.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' });
+      return d.toLocaleDateString('en-AU', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
     }
 
-    window.updateStatus = async function (id, status) {
-      const ref = doc(db, "bookings", id);
-      await updateDoc(ref, { status });
-      bookings = bookings.map(b => b.id === id ? { ...b, status } : b);
+    function displayBookings(bookings) {
+      tbody.innerHTML = bookings.length
+        ? bookings.map(b => {
+            const statusClass =
+              b.status === "Approved"
+                ? "status-approved"
+                : b.status === "Rejected"
+                ? "status-rejected"
+                : "status-pending";
+            return `
+              <tr>
+                <td data-label="Room">${b.room}</td>
+                <td data-label="Name">${b.name}</td>
+                <td data-label="Date">${formatDate(b.date)}</td>
+                <td data-label="Timeslot">${b.timeslot}</td>
+                <td data-label="Status">
+                  <select class="${statusClass}" onchange="updateStatus('${b.id}', this.value)">
+                    <option value="Pending" ${b.status === "Pending" ? "selected" : ""}>Pending</option>
+                    <option value="Approved" ${b.status === "Approved" ? "selected" : ""}>Approved</option>
+                    <option value="Rejected" ${b.status === "Rejected" ? "selected" : ""}>Rejected</option>
+                  </select>
+                </td>
+              </tr>`;
+          }).join("")
+        : `<tr><td colspan="5">No bookings found.</td></tr>`;
+    }
+
+    window.updateStatus = async function (id, newStatus) {
+      await updateDoc(doc(db, "bookings", id), { status: newStatus });
+      const booking = allBookings.find(b => b.id === id);
+      if (booking) booking.status = newStatus;
       applyFilters();
+    };
+
+    window.applyFilters = function () {
+      const room = document.getElementById("filterRoom").value;
+      const status = document.getElementById("filterStatus").value;
+      const fromDate = document.getElementById("filterDate").value;
+      const showPast = document.getElementById("showPast").checked;
+      const today = new Date().toISOString().split("T")[0];
+
+      const filtered = allBookings.filter(b =>
+        (!room || b.room === room) &&
+        (!status || b.status === status) &&
+        (!fromDate || b.date >= fromDate) &&
+        (showPast || b.date >= today)
+      );
+
+      displayBookings(filtered);
+    };
+
+    window.clearFilters = function () {
+      document.getElementById("filterRoom").value = "";
+      document.getElementById("filterStatus").value = "";
+      document.getElementById("filterDate").value = "";
+      document.getElementById("showPast").checked = false;
+      displayBookings(allBookings);
+    };
+
+    window.exportToExcel = function () {
+      const rows = document.querySelectorAll("#bookingTable tbody tr");
+      const data = [["Room", "Name", "Date", "Timeslot", "Status"]];
+
+      rows.forEach(row => {
+        const cols = row.querySelectorAll("td");
+        if (cols.length === 5) {
+          data.push([
+            cols[0].textContent.trim(),
+            cols[1].textContent.trim(),
+            cols[2].textContent.trim(),
+            cols[3].textContent.trim(),
+            cols[4].querySelector("select")?.value || cols[4].textContent.trim()
+          ]);
+        }
+      });
+
+      const worksheet = XLSX.utils.aoa_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+
+      XLSX.writeFile(workbook, "Bookings.xlsx");
+    };
+
+    async function loadBookings() {
+      const snapshot = await getDocs(collection(db, "bookings"));
+      allBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      displayBookings(allBookings);
     }
 
     loadBookings();
@@ -206,7 +269,7 @@
       if (input === ADMIN_PASSWORD) {
         document.getElementById("loginSection").classList.add("hidden");
         document.getElementById("adminSection").classList.remove("hidden");
-        window.applyFilters();
+        applyFilters();
       } else {
         loginMessage.textContent = "Incorrect password";
       }
