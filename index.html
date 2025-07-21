@@ -2,10 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Current Bookings</title>
+  <title>Admin Booking List</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+    }
+    #loginSection {
+      margin-top: 2rem;
+    }
+    .hidden {
+      display: none;
+    }
+    .filters, .actions {
+      margin: 1rem 0;
+    }
+    .filters label {
+      margin-right: 1rem;
     }
     table {
       border-collapse: collapse;
@@ -15,7 +27,6 @@
     th, td {
       border: 1px solid #aaa;
       padding: 8px;
-      text-align: left;
     }
     th {
       background-color: #eee;
@@ -23,60 +34,71 @@
     .status-Pending { color: orange; }
     .status-Approved { color: green; }
     .status-Rejected { color: red; }
-    .filters {
-      margin-bottom: 1rem;
-    }
-    .filters label {
-      margin-right: 1rem;
-    }
   </style>
 </head>
 <body>
-  <h1>📋 Current Bookings</h1>
 
-  <div class="filters">
-    <label>
-      Room:
-      <select id="filterRoom">
-        <option value="">All</option>
-        <option value="SSL Origin">SSL Origin</option>
-        <option value="SSL AWS">SSL AWS</option>
-        <option value="Edit Suite">Edit Suite</option>
-      </select>
-    </label>
-
-    <label>
-      Status:
-      <select id="filterStatus">
-        <option value="">All</option>
-        <option value="Pending">Pending</option>
-        <option value="Approved">Approved</option>
-        <option value="Rejected">Rejected</option>
-      </select>
-    </label>
-
-    <label>
-      From Date:
-      <input type="date" id="filterDate">
-    </label>
-
-    <button id="applyFilters">Apply Filters</button>
+  <!-- 🔒 Login Section -->
+  <div id="loginSection">
+    <h2>🔒 Admin Login</h2>
+    <input type="password" id="passwordInput" placeholder="Enter password">
+    <button onclick="login()">Login</button>
+    <p id="loginMessage" style="color: red;"></p>
   </div>
 
-  <table id="bookingTable">
-    <thead>
-      <tr>
-        <th>Room</th>
-        <th>Name</th>
-        <th>Date</th>
-        <th>Timeslot</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Booking rows will go here -->
-    </tbody>
-  </table>
+  <!-- ✅ Admin Interface -->
+  <div id="adminSection" class="hidden">
+    <h1>📋 Booking Manager</h1>
+
+    <div class="filters">
+      <label>
+        Room:
+        <select id="filterRoom">
+          <option value="">All</option>
+          <option value="SSL Origin">SSL Origin</option>
+          <option value="SSL AWS">SSL AWS</option>
+          <option value="Edit Suite">Edit Suite</option>
+        </select>
+      </label>
+
+      <label>
+        Status:
+        <select id="filterStatus">
+          <option value="">All</option>
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+      </label>
+
+      <label>
+        From Date:
+        <input type="date" id="filterDate">
+      </label>
+
+      <label>
+        <input type="checkbox" id="showPast"> Show Past Bookings
+      </label>
+
+      <button id="applyFilters">Apply Filters</button>
+      <button id="clearFilters">Clear Filters</button>
+    </div>
+
+    <table id="bookingTable">
+      <thead>
+        <tr>
+          <th>Room</th>
+          <th>Name</th>
+          <th>Date</th>
+          <th>Timeslot</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Populated by JS -->
+      </tbody>
+    </table>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
@@ -85,7 +107,9 @@
       collection,
       getDocs,
       query,
-      orderBy
+      orderBy,
+      updateDoc,
+      doc
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -100,11 +124,30 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const tbody = document.querySelector("#bookingTable tbody");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginSection = document.getElementById("loginSection");
+    const adminSection = document.getElementById("adminSection");
+    const loginMessage = document.getElementById("loginMessage");
+
     const roomFilter = document.getElementById("filterRoom");
     const statusFilter = document.getElementById("filterStatus");
     const dateFilter = document.getElementById("filterDate");
+    const showPast = document.getElementById("showPast");
     const applyBtn = document.getElementById("applyFilters");
+    const clearBtn = document.getElementById("clearFilters");
+    const tbody = document.querySelector("#bookingTable tbody");
+
+    const ADMIN_PASSWORD = "admin123"; // Change to your desired password
+
+    function login() {
+      if (passwordInput.value === ADMIN_PASSWORD) {
+        loginSection.classList.add("hidden");
+        adminSection.classList.remove("hidden");
+        applyFilters();
+      } else {
+        loginMessage.textContent = "Incorrect password";
+      }
+    }
 
     function formatDate(isoString) {
       const [year, month, day] = isoString.split("-");
@@ -113,15 +156,13 @@
 
     async function loadBookings() {
       const snapshot = await getDocs(query(collection(db, "bookings"), orderBy("date", "desc")));
-      let bookings = [];
+      const today = new Date().toISOString().split("T")[0];
+      const bookings = [];
 
       snapshot.forEach(doc => {
-        bookings.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        bookings.push({ id: doc.id, ...data });
       });
-
-      // Filter to only future dates (>= today)
-      const today = new Date().toISOString().split("T")[0];
-      bookings = bookings.filter(b => b.date >= today);
 
       return bookings;
     }
@@ -136,43 +177,65 @@
 
       bookings.forEach(data => {
         const row = document.createElement("tr");
+
+        const statusSelect = `
+          <select onchange="updateStatus('${data.id}', this.value)">
+            <option value="Pending" ${data.status === "Pending" ? "selected" : ""}>Pending</option>
+            <option value="Approved" ${data.status === "Approved" ? "selected" : ""}>Approved</option>
+            <option value="Rejected" ${data.status === "Rejected" ? "selected" : ""}>Rejected</option>
+          </select>
+        `;
+
         row.innerHTML = `
           <td>${data.room}</td>
           <td>${data.name}</td>
           <td>${formatDate(data.date)}</td>
           <td>${data.timeslot}</td>
-          <td class="status-${data.status}">${data.status}</td>
+          <td>${statusSelect}</td>
         `;
+
         tbody.appendChild(row);
       });
     }
 
+    window.updateStatus = async (id, newStatus) => {
+      try {
+        const ref = doc(db, "bookings", id);
+        await updateDoc(ref, { status: newStatus });
+        console.log(`✅ Updated ${id} to ${newStatus}`);
+      } catch (err) {
+        alert("Failed to update status");
+        console.error(err);
+      }
+    };
+
     async function applyFilters() {
       let bookings = await loadBookings();
-
       const roomVal = roomFilter.value;
       const statusVal = statusFilter.value;
       const dateVal = dateFilter.value;
+      const today = new Date().toISOString().split("T")[0];
 
-      if (roomVal) {
-        bookings = bookings.filter(b => b.room === roomVal);
+      // Default to future bookings
+      if (!showPast.checked) {
+        bookings = bookings.filter(b => b.date >= today);
       }
 
-      if (statusVal) {
-        bookings = bookings.filter(b => b.status === statusVal);
-      }
-
-      if (dateVal) {
-        bookings = bookings.filter(b => b.date >= dateVal);
-      }
+      if (roomVal) bookings = bookings.filter(b => b.room === roomVal);
+      if (statusVal) bookings = bookings.filter(b => b.status === statusVal);
+      if (dateVal) bookings = bookings.filter(b => b.date >= dateVal);
 
       displayBookings(bookings);
     }
 
     applyBtn.addEventListener("click", applyFilters);
-
-    // Load on page start
-    applyFilters();
+    clearBtn.addEventListener("click", () => {
+      roomFilter.value = "";
+      statusFilter.value = "";
+      dateFilter.value = "";
+      showPast.checked = false;
+      applyFilters();
+    });
   </script>
 </body>
 </html>
