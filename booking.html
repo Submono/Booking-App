@@ -29,13 +29,21 @@
     const db = getFirestore(app);
 
     async function bookRoom() {
-      try {
-        const docRef = await addDoc(collection(db, "bookings"), {
-          room: "Test Room",
-          date: "2025-07-22",
-          timeslot: "9am–1pm",
-          name: "Test User",
-          status: "Pending"
+  try {
+    const docRef = await addDoc(collection(db, "bookings"), {
+      room: "Test Room",
+      date: new Date().toISOString().split("T")[0],
+      timeslot: "now",
+      name: "Josh (Test)",
+      status: "Pending",
+      created: new Date()
+    });
+    alert("✅ Booking submitted! ID: " + docRef.id);
+  } catch (error) {
+    console.error("❌ Firestore write error:", error);
+    alert("Write failed: " + error.message);
+  }
+}
         });
         alert("✅ Booking submitted! ID: " + docRef.id);
       } catch (error) {
