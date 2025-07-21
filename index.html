@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <title>Current Bookings</title>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -20,10 +23,46 @@
     .status-Pending { color: orange; }
     .status-Approved { color: green; }
     .status-Rejected { color: red; }
+    .filters {
+      margin-bottom: 1rem;
+    }
+    .filters label {
+      margin-right: 1rem;
+    }
   </style>
 </head>
 <body>
   <h1>📋 Current Bookings</h1>
+
+  <div class="filters">
+    <label>
+      Room:
+      <select id="filterRoom">
+        <option value="">All</option>
+        <option value="SSL Origin">SSL Origin</option>
+        <option value="SSL AWS">SSL AWS</option>
+        <option value="Edit Suite">Edit Suite</option>
+      </select>
+    </label>
+
+    <label>
+      Status:
+      <select id="filterStatus">
+        <option value="">All</option>
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+    </label>
+
+    <label>
+      From Date:
+      <input type="date" id="filterDate">
+    </label>
+
+    <button id="applyFilters">Apply Filters</button>
+  </div>
+
   <table id="bookingTable">
     <thead>
       <tr>
@@ -62,33 +101,78 @@
     const db = getFirestore(app);
 
     const tbody = document.querySelector("#bookingTable tbody");
+    const roomFilter = document.getElementById("filterRoom");
+    const statusFilter = document.getElementById("filterStatus");
+    const dateFilter = document.getElementById("filterDate");
+    const applyBtn = document.getElementById("applyFilters");
+
+    function formatDate(isoString) {
+      const [year, month, day] = isoString.split("-");
+      return `${day}/${month}/${year}`;
+    }
 
     async function loadBookings() {
-      const q = query(collection(db, "bookings"), orderBy("date", "desc"));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(query(collection(db, "bookings"), orderBy("date", "desc")));
+      let bookings = [];
 
-      if (snapshot.empty) {
+      snapshot.forEach(doc => {
+        bookings.push({ id: doc.id, ...doc.data() });
+      });
+
+      // Filter to only future dates (>= today)
+      const today = new Date().toISOString().split("T")[0];
+      bookings = bookings.filter(b => b.date >= today);
+
+      return bookings;
+    }
+
+    function displayBookings(bookings) {
+      tbody.innerHTML = "";
+
+      if (bookings.length === 0) {
         tbody.innerHTML = "<tr><td colspan='5'>No bookings found.</td></tr>";
         return;
       }
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      bookings.forEach(data => {
         const row = document.createElement("tr");
-
         row.innerHTML = `
           <td>${data.room}</td>
           <td>${data.name}</td>
-          <td>${data.date}</td>
+          <td>${formatDate(data.date)}</td>
           <td>${data.timeslot}</td>
           <td class="status-${data.status}">${data.status}</td>
         `;
-
         tbody.appendChild(row);
       });
     }
 
-    loadBookings();
+    async function applyFilters() {
+      let bookings = await loadBookings();
+
+      const roomVal = roomFilter.value;
+      const statusVal = statusFilter.value;
+      const dateVal = dateFilter.value;
+
+      if (roomVal) {
+        bookings = bookings.filter(b => b.room === roomVal);
+      }
+
+      if (statusVal) {
+        bookings = bookings.filter(b => b.status === statusVal);
+      }
+
+      if (dateVal) {
+        bookings = bookings.filter(b => b.date >= dateVal);
+      }
+
+      displayBookings(bookings);
+    }
+
+    applyBtn.addEventListener("click", applyFilters);
+
+    // Load on page start
+    applyFilters();
   </script>
 </body>
 </html>
