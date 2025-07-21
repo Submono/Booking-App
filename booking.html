@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Book a Room</title>
+</head>
+<body>
+    <h1>Studio Room Booking</h1>
+    <form onsubmit="bookRoom(); return false;">
+        <label for="room">Room:</label>
+        <select id="room" required>
+            <option value="SSL Origin">SSL Origin</option>
+            <option value="SSL AWS">SSL AWS</option>
+            <option value="Edit Suite">Edit Suite</option>
+        </select><br><br>
+
+        <label for="date">Date:</label>
+        <input type="date" id="date" required><br><br>
+
+        <label for="timeslot">Timeslot:</label>
+        <select id="timeslot" required>
+            <option value="9am–1pm">9am–1pm</option>
+            <option value="1pm–5pm">1pm–5pm</option>
+            <option value="5pm–9pm">5pm–9pm</option>
+        </select><br><br>
+
+        <label for="name">Your Name:</label>
+        <input type="text" id="name" required><br><br>
+
+        <button type="submit">Book Now</button>
+    </form>
+
+    <script type="module">
+        // Import Firebase SDK modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+        // TODO: Replace with your Firebase project config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
+            authDomain: "studio-bookings-5c9ba.firebaseapp.com",
+            projectId: "studio-bookings-5c9ba",
+            storageBucket: "studio-bookings-5c9ba.firebasestorage.app",
+            messagingSenderId: "1044574824840",
+            appId: "1:1044574824840:web:b4be9325f430390d29b23d"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function bookRoom() {
+            const room = document.getElementById("room").value;
+            const date = document.getElementById("date").value;
+            const timeslot = document.getElementById("timeslot").value;
+            const name = document.getElementById("name").value;
+
+            // Check for conflicts
+            const bookingsRef = collection(db, "bookings");
+            const q = query(bookingsRef,
+                where("room", "==", room),
+                where("date", "==", date),
+                where("timeslot", "==", timeslot),
+                where("status", "!=", "Rejected")
+            );
+
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+                alert("That room is already booked for this timeslot.");
+                return;
+            }
+
+            try {
+                await addDoc(bookingsRef, {
+                    room,
+                    date,
+                    timeslot,
+                    name,
+                    status: "Pending"
+                });
+                alert("Booking submitted! Awaiting admin approval.");
+                document.querySelector("form").reset();
+            } catch (error) {
+                console.error("Error adding booking: ", error);
+                alert("Failed to submit booking.");
+            }
+        }
+    </script>
+</body>
+</html>
