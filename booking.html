@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Booking Test Form</title>
+  <title>Room Booking</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 <body>
-  <h2>Test Booking Submission</h2>
-  <form onsubmit="submitBooking(); return false;">
+  <h2>Book a Room</h2>
+
+  <form id="bookingForm">
     <p><label>Your Name: <input type="text" id="name" required></label></p>
     <p><label>Room:
       <select id="room" required>
@@ -27,8 +28,9 @@
     <button type="submit">Submit</button>
   </form>
 
-  <p id="successMsg" style="color: green; font-weight: bold; display: none;">✅ Booking submitted!</p>
+  <p id="successMsg" style="display:none; color:green; font-weight:bold;">✅ Booking submitted!</p>
 
+  <!-- Non-module script workaround -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import {
@@ -39,8 +41,6 @@
       query,
       where
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-    console.log("✅ Firebase script loaded");
 
     const firebaseConfig = {
       apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
@@ -54,48 +54,52 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    window.submitBooking = async function () {
-      console.log("🟢 submitBooking called");
-      const name = document.getElementById("name").value.trim();
-      const room = document.getElementById("room").value;
-      const date = document.getElementById("date").value;
-      const timeslot = document.getElementById("timeslot").value;
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("bookingForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-      if (!name || !room || !date || !timeslot) {
-        alert("Please complete all fields.");
-        return;
-      }
+        const name = document.getElementById("name").value.trim();
+        const room = document.getElementById("room").value;
+        const date = document.getElementById("date").value;
+        const timeslot = document.getElementById("timeslot").value;
+        const successMsg = document.getElementById("successMsg");
 
-      try {
-        const bookingsRef = collection(db, "bookings");
-        const q = query(bookingsRef,
-          where("room", "==", room),
-          where("date", "==", date),
-          where("timeslot", "==", timeslot)
-        );
-        const snapshot = await getDocs(q);
-
-        if (!snapshot.empty) {
-          alert("❌ This timeslot is already booked.");
+        if (!name || !room || !date || !timeslot) {
+          alert("❗ Please fill out all fields.");
           return;
         }
 
-        await addDoc(bookingsRef, {
-          name,
-          room,
-          date,
-          timeslot,
-          status: "Pending"
-        });
+        try {
+          const bookingsRef = collection(db, "bookings");
+          const q = query(bookingsRef,
+            where("room", "==", room),
+            where("date", "==", date),
+            where("timeslot", "==", timeslot)
+          );
+          const snapshot = await getDocs(q);
 
-        document.getElementById("successMsg").style.display = "block";
-        document.querySelector("form").reset();
-        console.log("✅ Booking submitted");
-      } catch (error) {
-        console.error("❌ Firestore error:", error);
-        alert("An error occurred: " + error.message);
-      }
-    };
+          if (!snapshot.empty) {
+            alert("❌ That room is already booked for the selected timeslot.");
+            return;
+          }
+
+          await addDoc(bookingsRef, {
+            name,
+            room,
+            date,
+            timeslot,
+            status: "Pending"
+          });
+
+          successMsg.style.display = "block";
+          document.getElementById("bookingForm").reset();
+          console.log("✅ Booking submitted");
+        } catch (error) {
+          console.error("❌ Firestore Error:", error);
+          alert("An error occurred. Please try again.");
+        }
+      });
+    });
   </script>
 </body>
 </html>
