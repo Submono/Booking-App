@@ -2,24 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Test Booking Submission</title>
+  <title>Studio Booking Form</title>
 </head>
 <body>
-  <h1>Submit Test Booking</h1>
-  <form onsubmit="bookRoom(); return false;">
-    <button type="submit">Submit Test Booking</button>
+  <h1>📅 Book a Studio Session</h1>
+
+  <form id="bookingForm">
+    <label>
+      Name:<br>
+      <input type="text" id="name" required>
+    </label><br><br>
+
+    <label>
+      Room:<br>
+      <select id="room" required>
+        <option value="">-- Select Room --</option>
+        <option value="SSL Origin">SSL Origin</option>
+        <option value="SSL AWS">SSL AWS</option>
+        <option value="Edit Suite">Edit Suite</option>
+      </select>
+    </label><br><br>
+
+    <label>
+      Date:<br>
+      <input type="date" id="date" required>
+    </label><br><br>
+
+    <label>
+      Timeslot:<br>
+      <select id="timeslot" required>
+        <option value="">-- Select Timeslot --</option>
+        <option value="9am–1pm">9am–1pm</option>
+        <option value="1pm–5pm">1pm–5pm</option>
+        <option value="5pm–9pm">5pm–9pm</option>
+      </select>
+    </label><br><br>
+
+    <button type="submit">Submit Booking</button>
   </form>
+
+  <p id="message" style="color: green;"></p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import {
       getFirestore,
       collection,
-      addDoc,
-      getDocs
+      addDoc
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-    console.log("✅ Firebase script is running");
 
     const firebaseConfig = {
       apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
@@ -33,43 +63,39 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Submit a test booking
-    async function bookRoom() {
+    const form = document.getElementById("bookingForm");
+    const message = document.getElementById("message");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const room = document.getElementById("room").value;
+      const date = document.getElementById("date").value;
+      const timeslot = document.getElementById("timeslot").value;
+
+      if (!name || !room || !date || !timeslot) {
+        alert("❌ Please fill out all fields.");
+        return;
+      }
+
       try {
-        const docRef = await addDoc(collection(db, "bookings"), {
-          room: "Test Room",
-          date: new Date().toISOString().split("T")[0],
-          timeslot: "9am–1pm",
-          name: "Test User",
+        await addDoc(collection(db, "bookings"), {
+          name,
+          room,
+          date,
+          timeslot,
           status: "Pending",
           created: new Date()
         });
-        alert("✅ Booking submitted! ID: " + docRef.id);
-      } catch (error) {
-        console.error("❌ Firestore write error:", error);
-        alert("Write failed: " + error.message);
-      }
-    }
-
-    // Check Firestore for existing bookings
-    async function checkBookings() {
-      try {
-        const snapshot = await getDocs(collection(db, "bookings"));
-        if (snapshot.empty) {
-          console.log("📭 No bookings found.");
-        } else {
-          console.log(`📦 Found ${snapshot.size} bookings:`);
-          snapshot.forEach(doc => {
-            console.log("📄", doc.id, doc.data());
-          });
-        }
+        message.textContent = "✅ Booking submitted successfully!";
+        form.reset();
       } catch (err) {
-        console.error("❌ Error checking bookings:", err);
+        console.error("❌ Firestore error:", err);
+        message.style.color = "red";
+        message.textContent = "❌ Failed to submit booking.";
       }
-    }
-
-    // Run booking check on load
-    checkBookings();
+    });
   </script>
 </body>
 </html>
