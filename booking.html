@@ -50,10 +50,19 @@
         const db = getFirestore(app);
 
         async function bookRoom() {
-            const room = document.getElementById("room").value;
-            const date = document.getElementById("date").value;
-            const timeslot = document.getElementById("timeslot").value;
-            const name = document.getElementById("name").value;
+    await addDoc(collection(db, "bookings"), {
+      room: "Test Room",
+      date: "2025-07-22",
+      timeslot: "9am–1pm",
+      name: "Test User",
+      status: "Pending"
+    });
+    alert("Test booking submitted!");
+  } catch (error) {
+    console.error("Error writing to Firestore:", error);
+    alert("Failed to submit booking: " + error.message);
+  }
+}
 
             // Check for conflicts
             const bookingsRef = collection(db, "bookings");
