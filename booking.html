@@ -48,7 +48,10 @@
     import {
       getFirestore,
       collection,
-      addDoc
+      addDoc,
+      query,
+      where,
+      getDocs
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -69,6 +72,9 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      message.textContent = "";
+      message.style.color = "green";
+
       const name = document.getElementById("name").value.trim();
       const room = document.getElementById("room").value;
       const date = document.getElementById("date").value;
@@ -80,6 +86,22 @@
       }
 
       try {
+        // Check for existing booking with same room/date/timeslot
+        const q = query(
+          collection(db, "bookings"),
+          where("room", "==", room),
+          where("date", "==", date),
+          where("timeslot", "==", timeslot)
+        );
+
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          alert("❌ That room is already booked for the selected time.");
+          return;
+        }
+
+        // No conflict, create booking
         await addDoc(collection(db, "bookings"), {
           name,
           room,
@@ -88,6 +110,7 @@
           status: "Pending",
           created: new Date()
         });
+
         message.textContent = "✅ Booking submitted successfully!";
         form.reset();
       } catch (err) {
