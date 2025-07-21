@@ -1,42 +1,94 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Booking List</title>
-    <script type="module">
-        // Import the Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.x/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.x/firebase-firestore.js";
-
-        // Your Firebase config (replace with your actual config)
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        async function loadBookings() {
-            const querySnapshot = await getDocs(collection(db, "bookings"));
-            const list = document.getElementById("bookingsList");
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const li = document.createElement("li");
-                li.textContent = `Room: ${data.room}, Date: ${data.date}, Timeslot: ${data.timeslot}, Name: ${data.name}, Status: ${data.status}`;
-                list.appendChild(li);
-            });
-        }
-
-        window.onload = loadBookings;
-    </script>
+  <meta charset="UTF-8">
+  <title>Current Bookings</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #eee;
+    }
+    .status-Pending { color: orange; }
+    .status-Approved { color: green; }
+    .status-Rejected { color: red; }
+  </style>
 </head>
 <body>
-    <h1>Booking List</h1>
-    <ul id="bookingsList"></ul>
+  <h1>📋 Current Bookings</h1>
+  <table id="bookingTable">
+    <thead>
+      <tr>
+        <th>Room</th>
+        <th>Name</th>
+        <th>Date</th>
+        <th>Timeslot</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Booking rows will go here -->
+    </tbody>
+  </table>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      query,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
+      authDomain: "studio-bookings-5c9ba.firebaseapp.com",
+      projectId: "studio-bookings-5c9ba",
+      storageBucket: "studio-bookings-5c9ba.appspot.com",
+      messagingSenderId: "1044574824840",
+      appId: "1:1044574824840:web:b4be9325f430390d29b23d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const tbody = document.querySelector("#bookingTable tbody");
+
+    async function loadBookings() {
+      const q = query(collection(db, "bookings"), orderBy("date", "desc"));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        tbody.innerHTML = "<tr><td colspan='5'>No bookings found.</td></tr>";
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${data.room}</td>
+          <td>${data.name}</td>
+          <td>${data.date}</td>
+          <td>${data.timeslot}</td>
+          <td class="status-${data.status}">${data.status}</td>
+        `;
+
+        tbody.appendChild(row);
+      });
+    }
+
+    loadBookings();
+  </script>
 </body>
 </html>
