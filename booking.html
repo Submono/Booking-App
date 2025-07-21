@@ -4,33 +4,114 @@
   <meta charset="UTF-8" />
   <title>Room Booking</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+
+    h2 {
+      text-align: center;
+      padding: 20px 10px 10px;
+      font-size: 24px;
+    }
+
+    form {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      border-radius: 8px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 5px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    button {
+      margin-top: 25px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #successMsg {
+      display: none;
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 15px;
+      background: #e0ffe0;
+      border: 1px solid #90ee90;
+      border-radius: 6px;
+      color: green;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      form {
+        padding: 15px;
+      }
+      h2 {
+        font-size: 20px;
+        padding: 15px 10px 5px;
+      }
+      input, select, button {
+        font-size: 15px;
+      }
+    }
+  </style>
 </head>
 <body>
   <h2>Book a Room</h2>
 
   <form id="bookingForm">
-    <p><label>Your Name: <input type="text" id="name" required></label></p>
-    <p><label>Room:
-      <select id="room" required>
-        <option value="">-- Select --</option>
-        <option value="SSL Origin">SSL Origin</option>
-        <option value="SSL AWS">SSL AWS</option>
-        <option value="Edit Suite">Edit Suite</option>
-      </select></label></p>
-    <p><label>Date: <input type="date" id="date" required></label></p>
-    <p><label>Timeslot:
-      <select id="timeslot" required>
-        <option value="">-- Select --</option>
-        <option value="9am–1pm">9am–1pm</option>
-        <option value="1pm–5pm">1pm–5pm</option>
-        <option value="5pm–9pm">5pm–9pm</option>
-      </select></label></p>
-    <button type="submit">Submit</button>
+    <label for="name">Your Name:</label>
+    <input type="text" id="name" required>
+
+    <label for="room">Room:</label>
+    <select id="room" required>
+      <option value="">-- Select --</option>
+      <option value="SSL Origin">SSL Origin</option>
+      <option value="SSL AWS">SSL AWS</option>
+      <option value="Edit Suite">Edit Suite</option>
+    </select>
+
+    <label for="date">Date:</label>
+    <input type="date" id="date" required>
+
+    <label for="timeslot">Timeslot:</label>
+    <select id="timeslot" required>
+      <option value="">-- Select --</option>
+      <option value="9am–1pm">9am–1pm</option>
+      <option value="1pm–5pm">1pm–5pm</option>
+      <option value="5pm–9pm">5pm–9pm</option>
+    </select>
+
+    <button type="submit">Submit Booking</button>
   </form>
 
-  <p id="successMsg" style="display:none; color:green; font-weight:bold;">✅ Booking submitted!</p>
+  <p id="successMsg">✅ Booking submitted! Awaiting approval.</p>
 
-  <!-- Non-module script workaround -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import {
@@ -65,7 +146,7 @@
         const successMsg = document.getElementById("successMsg");
 
         if (!name || !room || !date || !timeslot) {
-          alert("❗ Please fill out all fields.");
+          alert("Please complete all fields.");
           return;
         }
 
@@ -79,7 +160,7 @@
           const snapshot = await getDocs(q);
 
           if (!snapshot.empty) {
-            alert("❌ That room is already booked for the selected timeslot.");
+            alert("❌ This room and timeslot is already booked.");
             return;
           }
 
@@ -93,9 +174,9 @@
 
           successMsg.style.display = "block";
           document.getElementById("bookingForm").reset();
-          console.log("✅ Booking submitted");
+          window.scrollTo(0, document.body.scrollHeight);
         } catch (error) {
-          console.error("❌ Firestore Error:", error);
+          console.error("Firestore Error:", error);
           alert("An error occurred. Please try again.");
         }
       });
