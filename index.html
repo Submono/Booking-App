@@ -137,9 +137,9 @@
     const clearBtn = document.getElementById("clearFilters");
     const tbody = document.querySelector("#bookingTable tbody");
 
-    const ADMIN_PASSWORD = "admin123"; // Change to your desired password
+    const ADMIN_PASSWORD = "50undpr0ducti0n"; // Custom admin password
 
-    function login() {
+    window.login = function () {
       if (passwordInput.value === ADMIN_PASSWORD) {
         loginSection.classList.add("hidden");
         adminSection.classList.remove("hidden");
@@ -147,7 +147,7 @@
       } else {
         loginMessage.textContent = "Incorrect password";
       }
-    }
+    };
 
     function formatDate(isoString) {
       const [year, month, day] = isoString.split("-");
@@ -216,7 +216,7 @@
       const dateVal = dateFilter.value;
       const today = new Date().toISOString().split("T")[0];
 
-      // Default to future bookings
+      // Filter future bookings unless showPast is checked
       if (!showPast.checked) {
         bookings = bookings.filter(b => b.date >= today);
       }
