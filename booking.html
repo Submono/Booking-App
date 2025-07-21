@@ -72,7 +72,6 @@
 </head>
 <body>
   <h1>Room Booking Form</h1>
-
   <form onsubmit="submitBooking(); return false;">
     <label for="name">Your Name:</label>
     <input type="text" id="name" required />
@@ -163,7 +162,7 @@
         window.scrollTo(0, document.body.scrollHeight);
       } catch (error) {
         console.error("❌ Firestore Error:", error);
-        alert("An error occurred while submitting the booking. Please try again.");
+        alert("An error occurred. Please try again.");
       }
     }
   </script>
