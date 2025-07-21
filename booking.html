@@ -8,7 +8,6 @@
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
-      padding: 0;
       background: #f9f9f9;
     }
     h1 {
@@ -45,8 +44,23 @@
     button:hover {
       background-color: #0056b3;
     }
+    #successMsg {
+      display: none;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 15px;
+      background: #e0ffe0;
+      border: 1px solid #90ee90;
+      border-radius: 6px;
+      color: green;
+      text-align: center;
+      font-weight: bold;
+    }
 
     @media (max-width: 600px) {
+      body {
+        margin: 10px;
+      }
       form {
         padding: 15px;
       }
@@ -58,6 +72,7 @@
 </head>
 <body>
   <h1>Room Booking Form</h1>
+
   <form onsubmit="submitBooking(); return false;">
     <label for="name">Your Name:</label>
     <input type="text" id="name" required />
@@ -83,6 +98,8 @@
 
     <button type="submit">Submit Booking</button>
   </form>
+
+  <p id="successMsg">✅ Booking submitted! Awaiting approval.</p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
@@ -112,27 +129,27 @@
       const room = document.getElementById("room").value;
       const date = document.getElementById("date").value;
       const timeslot = document.getElementById("timeslot").value;
+      const successMsg = document.getElementById("successMsg");
 
       if (!name || !room || !date || !timeslot) {
         alert("Please fill in all fields.");
         return;
       }
 
-      // Check for conflicts
-      const bookingsRef = collection(db, "bookings");
-      const q = query(bookingsRef,
-        where("room", "==", room),
-        where("date", "==", date),
-        where("timeslot", "==", timeslot)
-      );
-      const snapshot = await getDocs(q);
-
-      if (!snapshot.empty) {
-        alert("This room is already booked for that timeslot.");
-        return;
-      }
-
       try {
+        const bookingsRef = collection(db, "bookings");
+        const q = query(bookingsRef,
+          where("room", "==", room),
+          where("date", "==", date),
+          where("timeslot", "==", timeslot)
+        );
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          alert("❌ That room is already booked for the selected timeslot.");
+          return;
+        }
+
         await addDoc(bookingsRef, {
           name,
           room,
@@ -140,11 +157,13 @@
           timeslot,
           status: "Pending"
         });
-        alert("Booking submitted! Awaiting approval.");
+
+        successMsg.style.display = "block";
         document.querySelector("form").reset();
+        window.scrollTo(0, document.body.scrollHeight);
       } catch (error) {
-        console.error("Error adding document: ", error);
-        alert("Something went wrong. Please try again.");
+        console.error("❌ Firestore Error:", error);
+        alert("An error occurred while submitting the booking. Please try again.");
       }
     }
   </script>
