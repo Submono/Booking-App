@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Booking List</title>
+    <script type="module">
+        // Import the Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.x/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.x/firebase-firestore.js";
+
+        // Your Firebase config (replace with your actual config)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function loadBookings() {
+            const querySnapshot = await getDocs(collection(db, "bookings"));
+            const list = document.getElementById("bookingsList");
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const li = document.createElement("li");
+                li.textContent = `Room: ${data.room}, Date: ${data.date}, Timeslot: ${data.timeslot}, Name: ${data.name}, Status: ${data.status}`;
+                list.appendChild(li);
+            });
+        }
+
+        window.onload = loadBookings;
+    </script>
+</head>
+<body>
+    <h1>Booking List</h1>
+    <ul id="bookingsList"></ul>
+</body>
+</html>
