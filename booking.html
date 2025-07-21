@@ -5,37 +5,16 @@
     <title>Book a Room</title>
 </head>
 <body>
-    <h1>Studio Room Booking</h1>
+    <h1>Studio Room Booking (Test Mode)</h1>
     <form onsubmit="bookRoom(); return false;">
-        <label for="room">Room:</label>
-        <select id="room" required>
-            <option value="SSL Origin">SSL Origin</option>
-            <option value="SSL AWS">SSL AWS</option>
-            <option value="Edit Suite">Edit Suite</option>
-        </select><br><br>
-
-        <label for="date">Date:</label>
-        <input type="date" id="date" required><br><br>
-
-        <label for="timeslot">Timeslot:</label>
-        <select id="timeslot" required>
-            <option value="9am–1pm">9am–1pm</option>
-            <option value="1pm–5pm">1pm–5pm</option>
-            <option value="5pm–9pm">5pm–9pm</option>
-        </select><br><br>
-
-        <label for="name">Your Name:</label>
-        <input type="text" id="name" required><br><br>
-
-        <button type="submit">Book Now</button>
+        <p>This is a test submission to check Firestore connection.</p>
+        <button type="submit">Submit Test Booking</button>
     </form>
 
     <script type="module">
-        // Import Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-        // ✅ Correct Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
             authDomain: "studio-bookings-5c9ba.firebaseapp.com",
@@ -45,53 +24,22 @@
             appId: "1:1044574824840:web:b4be9325f430390d29b23d"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         async function bookRoom() {
-    await addDoc(collection(db, "bookings"), {
-      room: "Test Room",
-      date: "2025-07-22",
-      timeslot: "9am–1pm",
-      name: "Test User",
-      status: "Pending"
-    });
-    alert("Test booking submitted!");
-  } catch (error) {
-    console.error("Error writing to Firestore:", error);
-    alert("Failed to submit booking: " + error.message);
-  }
-}
-
-            // Check for conflicts
-            const bookingsRef = collection(db, "bookings");
-            const q = query(bookingsRef,
-                where("room", "==", room),
-                where("date", "==", date),
-                where("timeslot", "==", timeslot),
-                where("status", "!=", "Rejected")
-            );
-
-            const snapshot = await getDocs(q);
-            if (!snapshot.empty) {
-                alert("That room is already booked for this timeslot.");
-                return;
-            }
-
             try {
-                await addDoc(bookingsRef, {
-                    room,
-                    date,
-                    timeslot,
-                    name,
+                const docRef = await addDoc(collection(db, "bookings"), {
+                    room: "Test Room",
+                    date: "2025-07-22",
+                    timeslot: "9am–1pm",
+                    name: "Test User",
                     status: "Pending"
                 });
-                alert("Booking submitted! Awaiting admin approval.");
-                document.querySelector("form").reset();
+                alert("✅ Test booking submitted! ID: " + docRef.id);
             } catch (error) {
-                console.error("Error adding booking: ", error);
-                alert("Failed to submit booking.");
+                console.error("❌ Error writing to Firestore:", error);
+                alert("Write failed: " + error.message);
             }
         }
     </script>
