@@ -1,47 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Book a Room</title>
+  <meta charset="UTF-8">
+  <title>Test Booking Submission</title>
 </head>
 <body>
-    <h1>Studio Room Booking (Test Mode)</h1>
-    <form onsubmit="bookRoom(); return false;">
-        <p>This is a test submission to check Firestore connection.</p>
-        <button type="submit">Submit Test Booking</button>
-    </form>
+  <h1>Submit Test Booking</h1>
+  <form onsubmit="bookRoom(); return false;">
+    <button type="submit">Submit Test Booking</button>
+  </form>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
-            authDomain: "studio-bookings-5c9ba.firebaseapp.com",
-            projectId: "studio-bookings-5c9ba",
-            storageBucket: "studio-bookings-5c9ba.appspot.com",
-            messagingSenderId: "1044574824840",
-            appId: "1:1044574824840:web:b4be9325f430390d29b23d"
-        };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDu5Wtsc9FHVnSbyRp96qoBmtK1kc5lKtE",
+      authDomain: "studio-bookings-5c9ba.firebaseapp.com",
+      projectId: "studio-bookings-5c9ba",
+      storageBucket: "studio-bookings-5c9ba.appspot.com",
+      messagingSenderId: "1044574824840",
+      appId: "1:1044574824840:web:b4be9325f430390d29b23d"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        async function bookRoom() {
-            try {
-                const docRef = await addDoc(collection(db, "bookings"), {
-                    room: "Test Room",
-                    date: "2025-07-22",
-                    timeslot: "9am–1pm",
-                    name: "Test User",
-                    status: "Pending"
-                });
-                alert("✅ Test booking submitted! ID: " + docRef.id);
-            } catch (error) {
-                console.error("❌ Error writing to Firestore:", error);
-                alert("Write failed: " + error.message);
-            }
-        }
-    </script>
+    async function bookRoom() {
+      try {
+        const docRef = await addDoc(collection(db, "bookings"), {
+          room: "Test Room",
+          date: "2025-07-22",
+          timeslot: "9am–1pm",
+          name: "Test User",
+          status: "Pending"
+        });
+        alert("✅ Booking submitted! ID: " + docRef.id);
+      } catch (error) {
+        console.error("❌ Firestore write error:", error);
+        alert("Write failed: " + error.message);
+      }
+    }
+  </script>
 </body>
 </html>
